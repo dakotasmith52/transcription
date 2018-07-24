@@ -58,7 +58,7 @@ def uploadformfile(bucketname):
 
 def transcribe(inputLang):
     ts = boto3.client('transcribe', region_name='us-west-2')
-    job_name = str(randint(1000,9999))
+    job_name = str(randint(10000,1000000))
     job_uri = 'https://s3-us-west-2.amazonaws.com/rainbowbird/recordings/'+outfile
     ts.start_transcription_job(
         TranscriptionJobName=job_name,
