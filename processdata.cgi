@@ -12,6 +12,7 @@ import io
 from contextlib import closing
 import sys
 import shutil
+import speech_recognition as sr
 
 formData = cgi.FieldStorage()
 s3 = boto3.resource('s3')
@@ -57,33 +58,15 @@ def uploadformfile(bucketname):
     os.remove(outfile)
 
 def transcribe(inputLang):
-    ts = boto3.client('transcribe', region_name='us-west-2')
-    job_name = str(randint(10000,1000000))
-    job_uri = 'https://s3-us-west-2.amazonaws.com/rainbowbird/recordings/'+outfile
-    ts.start_transcription_job(
-        TranscriptionJobName=job_name,
-        Media={'MediaFileUri': job_uri},
-        MediaFormat=determineFormat(),
-        LanguageCode=inputLang
-    )
-    while True:
-        status = ts.get_transcription_job(TranscriptionJobName=job_name)
-        if status['TranscriptionJob']['TranscriptionJobStatus'] in ['COMPLETED', 'FAILED']:
-            break
-        time.sleep(5)
-    transcript_uri = status['TranscriptionJob']['Transcript']['TranscriptFileUri']
-    dlfile = 'ts.json'
-    f = urllib2.urlopen(transcript_uri)
-    with io.FileIO(dlfile, 'wb') as code:
-        code.write(f.read())
-    with open(dlfile) as x:
-        datastore = json.load(x)
-    transcription = (datastore['results']['transcripts'][0]['transcript']).encode('utf-8')
-    with open('transcription.txt', 'w') as x:
-        x.write(transcription)
-    upload('transcription.txt', 'transcriptions/')
+    recording = sr.AudioFile(fileitem)
+    with recording as source:
+        audio = r.record(source)
     global transcript
-    transcript = transcription
+    transcript = r.recognize_google(audio, language=inputLang)
+    with open('transcription.txt', 'w') as x:
+        x.write(transcript)
+    upload('transcription.txt', 'transcriptions/')
+
     
 def translate(inputLang, outputLang, transcription):
     text=transcription
