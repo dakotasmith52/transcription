@@ -58,7 +58,7 @@ def uploadformfile(bucketname):
     os.remove(outfile)
 
 def transcribe(inputLang):
-    recording = sr.AudioFile(fileitem)
+    recording = sr.AudioFile(fileitem.file)
     with recording as source:
         audio = r.record(source)
     global transcript
