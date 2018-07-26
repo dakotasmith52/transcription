@@ -14,7 +14,6 @@ import sys
 import shutil
 import speech_recognition as sr
 from pydub import AudioSegment
-import subprocess
 
 formData = cgi.FieldStorage()
 s3 = boto3.resource('s3')
@@ -65,6 +64,7 @@ def convert_audio():
         subprocess.call(command, shell=True)
     else:
         converted_file = sound.export('./converted_audio.wav', format='wav')
+
 
 def transcribe(inputLang):
     convert_audio()
