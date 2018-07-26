@@ -12,6 +12,9 @@ import io
 from contextlib import closing
 import sys
 import shutil
+import speech_recognition as sr
+from pydub import AudioSegment
+import subprocess
 
 formData = cgi.FieldStorage()
 s3 = boto3.resource('s3')
@@ -54,36 +57,28 @@ def uploadformfile(bucketname):
         shutil.copyfileobj(fileitem.file, fout, 100000)
     s3 = boto3.resource('s3')
     s3.meta.client.upload_file(outfile, bucketname, 'recordings/'+outfile)
-    os.remove(outfile)
+
+def convert_audio():
+    sound = AudioSegment.from_file(outfile)
+    if determineFormat() == 'mp4':
+        command = "ffmpeg -i "+outfile+' -ab 160k -ac 2 -ar 44100 -vn converted_audio.wav'
+        subprocess.call(command, shell=True)
+    else:
+        converted_file = sound.export('./converted_audio.wav', format='wav')
 
 def transcribe(inputLang):
-    ts = boto3.client('transcribe', region_name='us-west-2')
-    job_name = str(randint(1000,9999))
-    job_uri = 'https://s3-us-west-2.amazonaws.com/rainbowbird/recordings/'+outfile
-    ts.start_transcription_job(
-        TranscriptionJobName=job_name,
-        Media={'MediaFileUri': job_uri},
-        MediaFormat=determineFormat(),
-        LanguageCode=inputLang
-    )
-    while True:
-        status = ts.get_transcription_job(TranscriptionJobName=job_name)
-        if status['TranscriptionJob']['TranscriptionJobStatus'] in ['COMPLETED', 'FAILED']:
-            break
-        time.sleep(5)
-    transcript_uri = status['TranscriptionJob']['Transcript']['TranscriptFileUri']
-    dlfile = 'ts.json'
-    f = urllib2.urlopen(transcript_uri)
-    with io.FileIO(dlfile, 'wb') as code:
-        code.write(f.read())
-    with open(dlfile) as x:
-        datastore = json.load(x)
-    transcription = (datastore['results']['transcripts'][0]['transcript']).encode('utf-8')
-    with open('transcription.txt', 'w') as x:
-        x.write(transcription)
-    upload('transcription.txt', 'transcriptions/')
+    convert_audio()
+    r = sr.Recognizer()
+    recording = 'converted_audio.wav'
+    with recording as source:
+        audio = r.record(source)
     global transcript
-    transcript = transcription
+    transcript = r.recognize_google(audio, language=inputLang)
+    with open('transcription.txt', 'w') as x:
+        x.write(transcript)
+    upload('transcription.txt', 'transcriptions/')
+    os.remove(outfile)
+
     
 def translate(inputLang, outputLang, transcription):
     text=transcription
