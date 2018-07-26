@@ -69,7 +69,7 @@ def convert_audio():
 def transcribe(inputLang):
     convert_audio()
     r = sr.Recognizer()
-    recording = 'converted_audio.wav'
+    recording = sr.AudioFile('converted_audio.wav')
     with recording as source:
         audio = r.record(source)
     global transcript
